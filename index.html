@@ -20,56 +20,138 @@
             height: 400px;
             width: 100%;
             border: 2px solid #ddd;
+            position: relative;
         }
         h1 {
             color: #2c3e50;
             margin-bottom: 20px;
+        }
+        .loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px 20px;
+            border-radius: 4px;
+            display: none;
+        }
+        .tiles-loading {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            font-size: 12px;
+            z-index: 1000;
+            display: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>My Leaflet Map</h1>
-        <div id="map"></div>
+        <div id="map">
+            <div id="loader" class="loader">Loading map...</div>
+            <div id="tilesLoading" class="tiles-loading">Loading tiles...</div>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
-        const map = L.map('map').setView([51.505, -0.09], 13);
+        // Show initial loading state
+        document.getElementById('loader').style.display = 'block';
+        
+        // Initialize loading counters
+        let loadingTiles = 0;
 
-        // Primary tile layer - CartoDB
-        const mainLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 19
-        }).addTo(map);
-
-        // Fallback tile layer - Stamen
-        const fallbackLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-            maxZoom: 19
+        // Create map with conservative zoom levels
+        const map = L.map('map', {
+            center: [51.505, -0.09],
+            zoom: 13,
+            minZoom: 4,
+            maxZoom: 16,
+            preferCanvas: true  // Better performance
         });
 
-        // Add a layer control to switch between tile providers
+        // Function to update loading indicator
+        function updateLoadingIndicator() {
+            const tilesLoading = document.getElementById('tilesLoading');
+            if (loadingTiles > 0) {
+                tilesLoading.style.display = 'block';
+                tilesLoading.textContent = `Loading tiles... (${loadingTiles} remaining)`;
+            } else {
+                tilesLoading.style.display = 'none';
+            }
+        }
+
+        // Primary layer - Stamen Terrain
+        const mainLayer = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg', {
+            attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>.',
+            subdomains: 'abcd',
+            maxZoom: 16
+        });
+
+        // Backup layer - Stamen Toner Lite
+        const backupLayer = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png', {
+            attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="http://openstreetmap.org">OpenStreetMap</a>',
+            subdomains: 'abcd',
+            maxZoom: 16
+        });
+
+        // Add event listeners for tile loading
+        mainLayer.on('loading', function() {
+            loadingTiles++;
+            updateLoadingIndicator();
+        });
+
+        mainLayer.on('load', function() {
+            loadingTiles--;
+            updateLoadingIndicator();
+        });
+
+        backupLayer.on('loading', function() {
+            loadingTiles++;
+            updateLoadingIndicator();
+        });
+
+        backupLayer.on('load', function() {
+            loadingTiles--;
+            updateLoadingIndicator();
+        });
+
+        // Handle tile errors
+        mainLayer.on('tileerror', function(e) {
+            console.log('Main layer tile error, switching to backup');
+            map.removeLayer(mainLayer);
+            backupLayer.addTo(map);
+        });
+
+        // Add the primary layer to the map
+        mainLayer.addTo(map);
+
+        // Layer control
         const baseMaps = {
-            "Light Theme": mainLayer,
-            "Smooth Theme": fallbackLayer
+            "Terrain": mainLayer,
+            "Light": backupLayer
         };
 
         L.control.layers(baseMaps).addTo(map);
 
-        // Add a marker
+        // Add a sample marker
         L.marker([51.5, -0.09])
             .addTo(map)
             .bindPopup('A sample marker!')
             .openPopup();
 
-        // Handle tile loading errors
-        mainLayer.on('tileerror', function(e) {
-            console.log('Main layer tile error, switching to fallback');
-            map.removeLayer(mainLayer);
-            fallbackLayer.addTo(map);
+        // Hide loader when map is ready
+        map.whenReady(function() {
+            document.getElementById('loader').style.display = 'none';
         });
+
+        // Add scale control
+        L.control.scale().addTo(map);
     </script>
 </body>
 </html>
