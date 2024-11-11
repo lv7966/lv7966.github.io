@@ -4,34 +4,81 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Leaflet Map</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha512-Zcn0yOqC3p91BHkMetB+hy+/NdXwOKxkYjkwxG9wKhqkTY0O9dCkKkh+HTyTo2RiBUqXP/nzKaD4LZHGU+lHw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            padding: 20px;
+            height: 100%;
+            box-sizing: border-box;
+        }
         #map {
             height: 400px;
             width: 100%;
+            border: 2px solid #ddd;
         }
-        body {
-            margin: 0;
-            padding: 20px;
+        /* Add visible styling to ensure CSS is loading */
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .map-error {
+            color: red;
+            padding: 10px;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <h1>My Leaflet Map</h1>
-    <div id="map"></div>
+    <div class="container">
+        <h1>My Leaflet Map</h1>
+        <div id="map"></div>
+        <div class="map-error" id="mapError"></div>
+    </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
-        const map = L.map('map').setView([51.505, -0.09], 13);
+        // Verify Leaflet is loaded
+        if (typeof L === 'undefined') {
+            console.error('Leaflet failed to load');
+            document.getElementById('mapError').style.display = 'block';
+            document.getElementById('mapError').textContent = 'Error: Map library failed to load';
+        } else {
+            console.log('Leaflet loaded successfully');
+            
+            try {
+                // Initialize the map with error handling
+                const map = L.map('map', {
+                    center: [51.505, -0.09],
+                    zoom: 13
+                });
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
+                // Add tile layer with error handling
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19
+                }).addTo(map)
+                .on('tileerror', function(e) {
+                    console.error('Tile loading error:', e);
+                });
 
-        L.marker([51.5, -0.09])
-            .addTo(map)
-            .bindPopup('A sample marker!')
-            .openPopup();
+                // Add a marker
+                L.marker([51.5, -0.09])
+                    .addTo(map)
+                    .bindPopup('A sample marker!')
+                    .openPopup();
+
+                console.log('Map initialized successfully');
+            } catch (error) {
+                console.error('Error initializing map:', error);
+                document.getElementById('mapError').style.display = 'block';
+                document.getElementById('mapError').textContent = 'Error: Failed to initialize map';
+            }
+        }
     </script>
 </body>
 </html>
