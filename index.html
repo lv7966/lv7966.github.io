@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Leaflet Map</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha512-Zcn0yOqC3p91BHkMetB+hy+/NdXwOKxkYjkwxG9wKhqkTY0O9dCkKkh+HTyTo2RiBUqXP/nzKaD4LZHGU+lHw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha512-Zcn0yOqC3p91BHkMetB+hy+/NdXwOKkYjkwxG9wKhqkTY0O9dCkKkh+HTyTo2RiBUqXP/nzKaD4LZHGU+lHw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         html, body {
             height: 100%;
@@ -21,15 +21,9 @@
             width: 100%;
             border: 2px solid #ddd;
         }
-        /* Add visible styling to ensure CSS is loading */
         h1 {
             color: #2c3e50;
             margin-bottom: 20px;
-        }
-        .map-error {
-            color: red;
-            padding: 10px;
-            display: none;
         }
     </style>
 </head>
@@ -37,48 +31,45 @@
     <div class="container">
         <h1>My Leaflet Map</h1>
         <div id="map"></div>
-        <div class="map-error" id="mapError"></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
-        // Verify Leaflet is loaded
-        if (typeof L === 'undefined') {
-            console.error('Leaflet failed to load');
-            document.getElementById('mapError').style.display = 'block';
-            document.getElementById('mapError').textContent = 'Error: Map library failed to load';
-        } else {
-            console.log('Leaflet loaded successfully');
-            
-            try {
-                // Initialize the map with error handling
-                const map = L.map('map', {
-                    center: [51.505, -0.09],
-                    zoom: 13
-                });
+        const map = L.map('map').setView([51.505, -0.09], 13);
 
-                // Add tile layer with error handling
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                    maxZoom: 19
-                }).addTo(map)
-                .on('tileerror', function(e) {
-                    console.error('Tile loading error:', e);
-                });
+        // Primary tile layer - CartoDB
+        const mainLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
 
-                // Add a marker
-                L.marker([51.5, -0.09])
-                    .addTo(map)
-                    .bindPopup('A sample marker!')
-                    .openPopup();
+        // Fallback tile layer - Stamen
+        const fallbackLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            maxZoom: 19
+        });
 
-                console.log('Map initialized successfully');
-            } catch (error) {
-                console.error('Error initializing map:', error);
-                document.getElementById('mapError').style.display = 'block';
-                document.getElementById('mapError').textContent = 'Error: Failed to initialize map';
-            }
-        }
+        // Add a layer control to switch between tile providers
+        const baseMaps = {
+            "Light Theme": mainLayer,
+            "Smooth Theme": fallbackLayer
+        };
+
+        L.control.layers(baseMaps).addTo(map);
+
+        // Add a marker
+        L.marker([51.5, -0.09])
+            .addTo(map)
+            .bindPopup('A sample marker!')
+            .openPopup();
+
+        // Handle tile loading errors
+        mainLayer.on('tileerror', function(e) {
+            console.log('Main layer tile error, switching to fallback');
+            map.removeLayer(mainLayer);
+            fallbackLayer.addTo(map);
+        });
     </script>
 </body>
 </html>
